@@ -1,47 +1,54 @@
 package service
 
 import (
-	"fmt"
+	"errors"
+	"time"
 	"zephyr-api-mod/internal/models"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var secretKey string = "hello"
+var tokenExpiration = time.Hour * 24
 
-func GenerateJWT(claims jwt.Claims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secretKey))
+func GenerateJWT(user *models.User) (string, error) {
+	claims := jwt.MapClaims{
+		"id":       user.Id,
+		"username": user.Username,
+		"role":     user.Role,
+		"exp":      time.Now().Add(tokenExpiration).Unix(),
+	}
+
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return t.SignedString([]byte(secretKey))
 }
 
-func ValidateJWT(tokenString string) (jwt.MapClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+func ValidateJWT(token string) (*models.User, error) {
+	// Parse the token and extract claims
+	claims := &jwt.MapClaims{}
+	t, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		// Check that the signing method is what we expect
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		// Return the secret key for verification
 		return []byte(secretKey), nil
 	})
+
 	if err != nil {
-		return nil, err
+		return nil, err // Return the error if parsing fails
 	}
-	if !token.Valid {
-		return nil, fmt.Errorf("token is invalid")
-	}
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("failed to parse claims")
-	}
-	return claims, nil
-}
 
-func parseClaims(claims jwt.MapClaims) models.User {
-	user := models.User{}
+	if !t.Valid {
+		return nil, errors.New("invalid token") // Return an error if the token is not valid
+	}
 
-	if userID, ok := claims["userid"].(float64); ok {
-		user.Id = int(userID)
+	// Extract user information from claims
+	user := &models.User{
+		Id:       int((*claims)["id"].(float64)), // Convert float64 to int
+		Username: (*claims)["username"].(string),
+		Role:     (*claims)["role"].(string),
 	}
-	if username, ok := claims["username"].(string); ok {
-		user.Username = username
-	}
-	if role, ok := claims["role"].(string); ok {
-		user.Role = role
-	}
-	return user
+
+	return user, nil // Return the user if everything is fine
 }
