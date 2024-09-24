@@ -1,12 +1,17 @@
 package service
 
-import "zephyr-api-mod/internal/models"
+import (
+	"zephyr-api-mod/internal/models"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 func GetUserByUsername(username string) (*models.User, error) {
 	stmt, err := Database.Prepare("SELECT id, username, role, password, code FROM users WHERE username = $1")
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	res := stmt.QueryRow(username)
 	var user models.User
 	err = res.Scan(&user.Id, &user.Username, &user.Role, &user.Password, &user.Code)
@@ -14,4 +19,29 @@ func GetUserByUsername(username string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func AddUser(user *models.User) error {
+	stmt, err := Database.Prepare("INSERT INTO users (username, password, role, code) values ($1, $2, $3, $4)")
+	if err != nil {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.Password = string(hash)
+	defer stmt.Close()
+	_, err = stmt.Exec(user.Username, user.Password, user.Role, user.Code)
+	return err
+}
+
+func RemoveUser(id int) error {
+	stmt, err := Database.Prepare("DELETE FROM users where id = $1")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(id)
+	return err
 }
