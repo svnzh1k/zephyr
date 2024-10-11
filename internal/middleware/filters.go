@@ -85,3 +85,35 @@ func AdminRoleValidator(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+func OwnerRoleValidator(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, exists := r.Context().Value("user").(*models.User)
+		if !exists {
+			http.Error(w, "No user in context", http.StatusInternalServerError)
+			return
+		}
+		if user.Role != "owner" {
+			http.Error(w, "You are not an owner", http.StatusInternalServerError)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func CORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow all origins
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight request
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
