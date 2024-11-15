@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"zephyr-api-mod/internal/handlers"
@@ -60,6 +61,7 @@ func main() {
 	mux.HandleFunc("PATCH   /owner/food/{id}", handlers.UpdateFood)
 	mux.HandleFunc("DELETE  /owner/food/{id}", handlers.RemoveFood)
 	mux.HandleFunc("GET     /food", handlers.GetFood)
+	mux.HandleFunc("GET /doc", hello)
 
 	wrappedMux := middleware.CORS(mux)
 
@@ -79,4 +81,14 @@ func main() {
 	fmt.Println("TEST")
 	http.ListenAndServe(":8080", middleware.RequestLogger(wrappedMux.ServeHTTP))
 
+}
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	htmlContent, err := ioutil.ReadFile("doc.html")
+	if err != nil {
+		http.Error(w, "Could not load page", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	w.Write(htmlContent)
 }
