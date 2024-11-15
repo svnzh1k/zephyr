@@ -62,6 +62,17 @@ func main() {
 	mux.HandleFunc("GET     /food", handlers.GetFood)
 
 	wrappedMux := middleware.CORS(mux)
+
+	asciiArt := `
+  _____          _                
+ |__  /___ _ __ | |__  _   _ _ __ 
+   / // _ \ '_ \| '_ \| | | | '__|
+  / /|  __/ |_) | | | | |_| | |   
+ /____\___| .__/|_| |_|\__, |_|   
+          |_|          |___/      
+    `
+	fmt.Println(asciiArt)
 	fmt.Println("Application started at port 8080")
 	http.ListenAndServe(":8080", middleware.RequestLogger(wrappedMux.ServeHTTP))
+
 }
