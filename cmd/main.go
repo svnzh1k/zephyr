@@ -73,6 +73,10 @@ func main() {
     `
 	fmt.Println(asciiArt)
 	fmt.Println("Application started at port 8080")
+
+	fmt.Println("TEST")
+	fmt.Println("TEST")
+	fmt.Println("TEST")
 	http.ListenAndServe(":8080", middleware.RequestLogger(wrappedMux.ServeHTTP))
 
 }
